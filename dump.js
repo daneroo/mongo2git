@@ -18,14 +18,39 @@ function dump(dbname,gitdir){
       proces.exit();
       return;
     }
+    doFiles(db);
     var basename = path.join(gitdir,dbname);  
-    eachCollection(db,basename,function(){
+    if(0)eachCollection(db,basename,function(){
       console.log('db:',dbname,'done');
       db.close();
     });
   });
 }
 
+function doFiles(db){
+//  var gridStore = new mongodb.GridStore(db, "foobar", "w");
+  var opts={id:true};
+  mongodb.GridStore.list(db, "fs", opts, function(err,fileIds){
+    //fileIds = [new mongodb.ObjectId('4f17171cdfaf88d45e00004d')];
+    fileIds = [new mongodb.ObjectID('4f17171cdfaf88d45e00004d')];
+    console.log('file Ids:',fileIds);
+    async.forEachSeries(fileIds,function(id,next){
+      
+      console.log('fetching: ',id,id._bsontype);
+      var g = new mongodb.Grid(db,"fs");
+      g.get(id,function(err,data){
+        console.log('got data:',typeof data,data.length);
+        // fs.writeSync(fd, buffer, offset, length, position);
+        mkdirp('files');
+        fs.writeFileSync('files/'+id+'.png',data);
+        next();
+      });      
+    },function(err){
+      console.log('done');
+      process.exit();
+    });    
+  });
+}
 function eachCollection(db,basename,cb){
   console.log('db:',dbname);
   db.collections(function(err, collections) {
@@ -70,11 +95,8 @@ function saveDoc(doc,backupDir,pretty,cb) {
   fname = fname + ".json";    
 
   fullfname = path.join(backupDir,fname);
-  // console.log("    saving object as %s (pretty %s)",fullfname,pretty);
-  var fd = fs.openSync(fullfname, 'w');// mode=0666);
   var json = pretty?JSON.stringify(doc,null,2):JSON.stringify(doc);
-  fs.writeSync(fd, json); //, position, [encoding='utf8']
-  fs.closeSync(fd);  
+  fs.writeFileSync(fullfname,json);
   cb(null);
 }
 

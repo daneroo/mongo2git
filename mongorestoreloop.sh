@@ -3,7 +3,7 @@
 # this is a shell array
 MONGODUMPS=(~/Downloads/Ekomobi_AllBackups/mongo-*.tgz)
 # MONGODUMPS=(~/Downloads/Ekomobi_AllBackups/mongo-*-20120121*.tgz)
-#MONGODUMPS=(~/Downloads/Ekomobi_AllBackups/mongo-*-2012021*.tgz)
+MONGODUMPS=(~/Downloads/Ekomobi_AllBackups/mongo-*-20120217*.tgz)
 RESTOREPATH=restore
 DATAPATH=data
 GITDIR=git-mongo
@@ -42,14 +42,6 @@ echo Git init
 rm -rf ${GITDIR}
 mkdir -p ${GITDIR}
 (cd ${GITDIR}; git init);
-
-# mkdir -p ${GITDIR}/db/coll
-# echo one `date` > ${GITDIR}/db/coll/one.txt
-# echo two `date` > ${GITDIR}/db/coll/two.txt
-# (cd ${GITDIR}; git add .; git commit -m 'added both');
-# rm -f ${GITDIR}/db/coll/one.txt
-# echo three `date` > ${GITDIR}/db/coll/three.txt
-# (cd ${GITDIR}; git add -u .; git status; git add .; git status; git commit -q -m 'removed one and added three');
 
 echo Start mongo
 rm -rf ${DATAPATH}
