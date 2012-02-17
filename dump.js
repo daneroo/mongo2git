@@ -1,79 +1,81 @@
 /*
 npm install mongodb
 npm install traverse
+npm install async
 */
 var path=require('path');
 var fs=require('fs');
 var mongodb = require('mongodb');
+var async = require('async');
 var traverse = require('traverse');
+
 
 function dump(dbname,gitdir){
   console.log("Dumping database: %s to %s",dbname,gitdir);
-  var collections=['sites','users','archives','system.indexes','fs.files'];
-  // var collections=['sites','users'];
-  var popAndSave=function(err,selfcb){
-    if (collections.length<=0) {
-      console.log('totaly done');
-      process.exit();
+  var mongoURL="mongodb://localhost/"+dbname+"?auto_reconnect=true";
+  mongodb.connect(mongoURL, function(err, db){
+    if(checkError(err)) {
+      proces.exit();
       return;
     }
-
-    var collectionName = collections.shift();
-    console.log('doing collection %s',collectionName);
-    var backupDir = path.join(gitdir,dbname,collectionName);
-    mkdirp(backupDir);
-    saveAll(dbname,collectionName,backupDir,selfcb);        
-  }
-  popAndSave(null,popAndSave);
-}
-
-function checkError(error,cb){
-  if (error) {
-    console.error(error.message);
-    if (cb) cb(error);
-    return true;
-  }
-  return false;
-}
-
-function saveAll(dbname,collectionName,backupDir,cb) {
-  var mongoURL="mongodb://localhost/"+dbname+"?auto_reconnect=true";
-
-  mongodb.connect(mongoURL, function(err, conn){
-    if(checkError(err)) {if(cb)cb(err);return;}
-    conn.collection(collectionName, function(err, coll){
-      if(checkError(err)) {if(cb)cb(err);return;}
-      // You can turn it into an array
-      coll.find({},{},function(err, cursor) {
-        if(checkError(err)) {if(cb)cb(err);return;}
-        cursor.toArray(function(err, docs) {          
-          if(checkError(err)) {if(cb)cb(err);return;}
-          console.log(collectionName+".count: " + docs.length);
-          rewriteMongoOut(docs);
-          docs.forEach(function(doc){
-            // console.log('doc',doc._id/*JSON.stringify(doc)*/);
-            saveOne(doc, backupDir,true);
-          });
-          if(cb) cb(null,cb);
-        });
-      });
+    var basename = path.join(gitdir,dbname);  
+    eachCollection(db,basename,function(){
+      console.log('db:',dbname,'done');
+      db.close();
     });
   });
 }
 
-function saveOne(doc, backupDir,pretty) {
-    var id = doc._id;
-    if (!id) {
-        id = doc.ns;
-    }
-    var fname = id.substr(3) + ".json";
-    
-    fullfname = path.join(backupDir,fname);
-    // console.log("    saving object as %s (pretty %s)",fullfname,pretty);
-    var fd = fs.openSync(fullfname, 'w' /*,0666*/);
-    var json = pretty?JSON.stringify(doc,null,2):JSON.stringify(doc);
-    fs.writeSync(fd, json /*, position, [encoding='utf8']*/);
-    fs.closeSync(fd);
+function eachCollection(db,basename,cb){
+  console.log('db:',dbname);
+  db.collections(function(err, collections) {
+    if ( checkError(err,cb) ) return;
+    console.log('|collections|:',collections.length);
+    async.forEachSeries(collections,function(collection,next){
+      console.log('  coll:',collection.collectionName);
+      if (collection.collectionName=='fs.chunks'){next();return;}
+      var backupDir = path.join(basename,collection.collectionName);
+      mkdirp(backupDir);    
+      eachDoc(collection,backupDir,function(err){
+        console.log('  coll:',collection.collectionName,'done');
+        next(err); 
+      });
+    },cb);      
+  });
+}
+
+function eachDoc(collection,backupDir,cb){
+  collection.find(function(err, cursor) {
+    if(checkError(err,cb)) return;
+    cursor.toArray(function(err, docs) {          
+      if(checkError(err,cb)) return;
+      console.log('    |coll(',collection.collectionName,')|:',docs.length);
+      rewriteMongoOut(docs);
+      async.forEachSeries(docs,function(doc,next){
+        saveDoc(doc,backupDir,true,next);
+      },cb);
+    });
+  });
+}
+
+function saveDoc(doc,backupDir,pretty,cb) {
+  var id = doc._id;
+  var fname;
+  if (!id) {
+    id = doc.ns;
+    fname=id;
+  } else {
+    fname = id.substr(3);
+  }
+  fname = fname + ".json";    
+
+  fullfname = path.join(backupDir,fname);
+  // console.log("    saving object as %s (pretty %s)",fullfname,pretty);
+  var fd = fs.openSync(fullfname, 'w');// mode=0666);
+  var json = pretty?JSON.stringify(doc,null,2):JSON.stringify(doc);
+  fs.writeSync(fd, json); //, position, [encoding='utf8']
+  fs.closeSync(fd);  
+  cb(null);
 }
 
 // replaces MongoId classes for "ID:<hexId>" string
@@ -107,12 +109,20 @@ function mkdirp(dirname){
     });
 }
 
+function checkError(error,cb){
+  if (error) {
+    console.error(error.message);
+    if (cb) cb(error);
+    return true;
+  }
+  return false;
+}
+
 if (process.argv.length<4){
     console.error('usage: node dump.js <dbname> <gitdir>')
     process.exit();
 }
 var dbname = process.argv[2];
 var gitdir = process.argv[3];
-
 dump(dbname,gitdir);
 
