@@ -2,7 +2,15 @@
 Idea: progressively commit changes in a mongo dump to a git repo
 
 
+
 ## Restore loop
+To fetch:
+
+    cd ~/Documents/Code/Ekomobi/migration/s3restore/
+    ruby s3restoreAllDailys.rb
+    rsync -n -av --progress mongo-ekomobi_prod-* /Users/daniel/Downloads/Ekomobi_AllBackups
+    
+
 To get started from a set of mongudump snapshots.
 
     fetch all dailys
