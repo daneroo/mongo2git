@@ -8,7 +8,7 @@ var fs=require('fs');
 var mongodb = require('mongodb');
 var async = require('async');
 var traverse = require('traverse');
-
+var crypto = require('crypto');
 
 function dump(dbname,gitdir){
   console.log("Dumping database: %s to %s",dbname,gitdir);
@@ -18,47 +18,14 @@ function dump(dbname,gitdir){
       proces.exit();
       return;
     }
-    doFiles(db);
     var basename = path.join(gitdir,dbname);  
-    if(0)eachCollection(db,basename,function(){
-      console.log('db:',dbname,'done');
-      db.close();
+    eachCollection(db,basename,function(){
+      console.log('db:%s collections done',dbname);
+      doFiles(db,basename,function(err){
+        console.log('db:%s fs.files done',dbname);
+        db.close();
+      });
     });
-  });
-}
-
-function doFiles(db){
-  var opts={id:true};
-  mongodb.GridStore.list(db, "fs", opts, function(err,fileIds){
-    // fileIds = [new mongodb.ObjectID('4f17171cdfaf88d45e00004d')];
-    // fileIds = [new mongodb.ObjectID('4e5d5724c9519c9d59000001')];
-    // fileIds = [new mongodb.ObjectID('4f17171cdfaf88d45e00004d'),new mongodb.ObjectID('4e5d5724c9519c9d59000001')];
-
-    console.log('file Ids:',fileIds);
-    mkdirp('files');
-    async.forEachSeries(fileIds,function(id,next){
-      
-      console.log('fetching: ',id,id._bsontype);
-      var g = new mongodb.Grid(db,"fs");
-      g.get(id,function(err,data){
-        var crypto = require('crypto');
-        var md5=crypto.createHash('md5').update(data).digest("hex");
-        console.log('-e64 data:',typeof data,data.length,'md5',md5);
-        fs.writeFileSync('files/'+id+'-e64-node.png',data);
-        
-        // base64 decode:
-        data = new Buffer(data.toString('binary'), 'base64');
-        var md5=crypto.createHash('md5').update(data).digest("hex");
-        console.log('+d64 data:',typeof data,data.length,'md5',md5);
-        fs.writeFileSync('files/'+id+'-d64-node.png',data);
-
-        next();
-
-      });      
-    },function(err){
-      console.log('done');
-      process.exit();
-    });    
   });
 }
 
@@ -77,6 +44,34 @@ function eachCollection(db,basename,cb){
         next(err); 
       });
     },cb);      
+  });
+}
+
+function doFiles(db,basename,cb){
+  var opts={id:true};
+  var backupDir = path.join(basename,'fs.chunks');
+  mkdirp(backupDir);    
+  mongodb.GridStore.list(db, "fs", opts, function(err,fileIds){
+    // fileIds = [new mongodb.ObjectID('4f17171cdfaf88d45e00004d'),new mongodb.ObjectID('4e5d5724c9519c9d59000001')];
+    mkdirp('files');
+    async.forEachSeries(fileIds,function(id,next){
+      
+      // console.log('fetching: ',id,id._bsontype);
+      var g = new mongodb.Grid(db,"fs");
+      g.get(id,function(err,data){
+        // base64 decode:
+        data = new Buffer(data.toString('binary'), 'base64');
+        var md5=crypto.createHash('md5').update(data).digest("hex");
+        console.log('file:%s length:%d md5:%s',id,data.length,md5);
+        fs.writeFileSync('files/'+id+'-node.png',data);
+        fs.writeFileSync(path.join(backupDir,id+'.png'),data);
+
+        next();
+      });      
+    },function(err){
+      console.log('doFiles done');
+      if (cb) cb();
+    });    
   });
 }
 

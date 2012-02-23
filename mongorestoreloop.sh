@@ -2,8 +2,8 @@
 
 # this is a shell array
 #MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*.tgz)
-# MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-20120121*.tgz)
-MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-20120223*.tgz)
+MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-201202*.tgz)
+# MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-20120223*.tgz)
 RESTOREPATH=restore
 DATAPATH=data
 GITDIR=git-mongo
@@ -16,9 +16,6 @@ function restoredump(){
     mkdir -p ${RESTOREPATH};
     (cd ${RESTOREPATH}; tar xzf ${DUMPARCHIVE}) >/dev/null
 
-    # rm -rf ${DATAPATH}
-    # mkdir ${DATAPATH}
-    # mongorestore --dbpath ${DATAPATH} --db ekomobi_bak restore >/dev/null
     time echo "db.dropDatabase()"|mongo ${DBNAME} >/dev/null
     echo "END drop ------"
     time mongorestore --drop --db ${DBNAME} restore >/dev/null
@@ -26,11 +23,12 @@ function restoredump(){
 
     # echo Sizes `du -sm ${RESTOREPATH} ${DATAPATH}`
 
-    time php dump.php ${DBNAME} ${GITDIR}
-    echo "END PHP  ------"
+    # fix chunks before of or after php..
     time node fixchunks.js ${DBNAME} ${GITDIR}
     time node fixchunks.js ${DBNAME} ${GITDIR}
     echo "END fix ------"
+    time php dump.php ${DBNAME} ${GITDIR}
+    echo "END PHP  ------"
     time node dump.js ${DBNAME} ${GITDIR}
     echo "END node ------"
 
@@ -57,8 +55,8 @@ for d in ${MONGODUMPS[@]}; do
     rm -rf ${GITDIR}/${DBNAME};
     # (cd ${GITDIR}; git status)
     restoredump $d
-    # time (cd ${GITDIR}; git add -u .; git add .; git status; git commit -q -m `basename $d .tgz`);
-    #     echo "END commit ------"
+    time (cd ${GITDIR}; git add -u .; git add .; git status; git commit -q -m `basename $d .tgz`);
+    echo "END commit ------"
     
 done
 

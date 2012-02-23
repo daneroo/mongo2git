@@ -69,29 +69,20 @@ function saveAll($dbname,$collectionName,$backupDir) {
     }
 }
 
-function saveFiles(){
-    if (1){
-        $dbname='ekomobi_bak';
-        $m = new Mongo("mongodb://localhost/", array("persist" => "onlyone"));
-        $db = $m->selectDB($dbname);
+function saveFiles($backupDir){
+    $dbname='ekomobi_bak';
+    $m = new Mongo("mongodb://localhost/", array("persist" => "onlyone"));
+    $db = $m->selectDB($dbname);
 
-        $files = $db->selectCollection('fs.files');
-        $cursor = $files->find();
-        foreach ($cursor as $file) {
-            $strid = "".$file['_id'];
-            // echo "Getting _id:".$strid."\n";
-            saveFile("".$strid);        
-        }
-    } else {
-        $fileIds=array('4f17171cdfaf88d45e00004d','4e5d5724c9519c9d59000001');
-        // $fileIds=array('4f17171cdfaf88d45e00004d');
-        foreach ($fileIds as $strid){
-            saveFile($strid);
-        }
+    $files = $db->selectCollection('fs.files');
+    $cursor = $files->find();
+    foreach ($cursor as $file) {
+        $strid = "".$file['_id'];
+        // echo "Getting _id:".$strid."\n";
+        saveFile("".$strid,$backupDir);        
     }
-
 }
-function saveFile($strid){
+function saveFile($strid,$backupDir){
     $dbname='ekomobi_bak';
     $m = new Mongo("mongodb://localhost/", array("persist" => "onlyone"));
     $db = $m->selectDB($dbname);
@@ -109,38 +100,35 @@ function saveFile($strid){
 
     
     $data=$file->getBytes();
-
-    $ascii='';
-    for ($i=0;$i<10;$i++) $ascii=$ascii.'.'.dechex(ord($data[$i]));
-    error_log('-dump.php data.len: '.strlen($data));
-    error_log('   raw: '.substr($data,0,10).'...'.substr($data,-10));
-    error_log('   hex: '.$ascii);
-
-    $tmpfile='files/'.$id.'-e64-php.png';// = 
-    $fp = fopen($tmpfile, 'w');
-    fwrite($fp, $data);
-    fclose($fp);
-
-    // unencode base64
+    // decode base64
     $data = base64_decode($data);
 
-    $tmpfile='files/'.$id.'-d64-php.png';// = str_replace('ID:', '', $strid).'.png';
+    $tmpfile='files/'.$id.'-php.png';
     $fp = fopen($tmpfile, 'w');
     fwrite($fp, $data);
     fclose($fp);
+
+    $tmpfile=$backupDir.'/'.$id.'.png';
+    $fp = fopen($tmpfile, 'w');
+    fwrite($fp, $data);
+    fclose($fp);
+    
 
     $type = exif_imagetype($tmpfile);
     $mimetype = image_type_to_mime_type($type);
-    error_log('+dump.php data.len: '.strlen($data).' type: '.$mimetype);
-
+    error_log('file:'.$id.' length:'.strlen($data).' md5:'.md5($data).' type:'.$mimetype);
 
 }
+
+
 $dbname = $argv[1];
 $gitdir = $argv[2];
 if ($dbname && $gitdir){
     echo "Saving One Image\n";
-    saveFiles();
-    exit();
+    if (1){
+        $backupDir = backupDir($gitdir,$dbname,'fs.chunks',true);
+        saveFiles($backupDir);
+    }
     echo "Dumping database: $dbname to $gitdir\n";
     $collections=array('sites','users','archives','system.indexes','fs.files');
     foreach ($collections as $collectionName) {
