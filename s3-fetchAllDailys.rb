@@ -80,7 +80,7 @@ selectedDB.each do |f|
   open(fname, 'w') do |file|
     file.write f.value
   end
-  md5 = Digest::MD5.file(f.name)
+  md5 = Digest::MD5.file(fname)
   puts "  -done     #{f.key} : md5:#{md5}"
   
 end
