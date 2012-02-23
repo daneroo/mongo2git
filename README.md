@@ -1,7 +1,5 @@
 # mongo2git = Mongudump to git
-Idea: progressively commit changes in a mongo dump to a git repo
-
-
+Idea: progressively commit database snapshots through a mongo dump to a git repo
 
 ## Restore loop
 To fetch:

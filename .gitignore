@@ -1,3 +1,7 @@
+
+s3-credentials-settings.rb
+snapshots-daily
+
 node_modules
 git-mongo
 restore
