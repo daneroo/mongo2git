@@ -28,22 +28,32 @@ function dump(dbname,gitdir){
 }
 
 function doFiles(db){
-//  var gridStore = new mongodb.GridStore(db, "foobar", "w");
   var opts={id:true};
   mongodb.GridStore.list(db, "fs", opts, function(err,fileIds){
-    //fileIds = [new mongodb.ObjectId('4f17171cdfaf88d45e00004d')];
-    fileIds = [new mongodb.ObjectID('4f17171cdfaf88d45e00004d')];
+    // fileIds = [new mongodb.ObjectID('4f17171cdfaf88d45e00004d')];
+    // fileIds = [new mongodb.ObjectID('4e5d5724c9519c9d59000001')];
+    // fileIds = [new mongodb.ObjectID('4f17171cdfaf88d45e00004d'),new mongodb.ObjectID('4e5d5724c9519c9d59000001')];
+
     console.log('file Ids:',fileIds);
+    mkdirp('files');
     async.forEachSeries(fileIds,function(id,next){
       
       console.log('fetching: ',id,id._bsontype);
       var g = new mongodb.Grid(db,"fs");
       g.get(id,function(err,data){
-        console.log('got data:',typeof data,data.length);
-        // fs.writeSync(fd, buffer, offset, length, position);
-        mkdirp('files');
-        fs.writeFileSync('files/'+id+'.png',data);
+        var crypto = require('crypto');
+        var md5=crypto.createHash('md5').update(data).digest("hex");
+        console.log('-e64 data:',typeof data,data.length,'md5',md5);
+        fs.writeFileSync('files/'+id+'-e64-node.png',data);
+        
+        // base64 decode:
+        data = new Buffer(data.toString('binary'), 'base64');
+        var md5=crypto.createHash('md5').update(data).digest("hex");
+        console.log('+d64 data:',typeof data,data.length,'md5',md5);
+        fs.writeFileSync('files/'+id+'-d64-node.png',data);
+
         next();
+
       });      
     },function(err){
       console.log('done');
@@ -51,6 +61,7 @@ function doFiles(db){
     });    
   });
 }
+
 function eachCollection(db,basename,cb){
   console.log('db:',dbname);
   db.collections(function(err, collections) {

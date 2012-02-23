@@ -1,9 +1,9 @@
 #!/bin/sh
 
 # this is a shell array
-MONGODUMPS=(~/Downloads/Ekomobi_AllBackups/mongo-*.tgz)
-# MONGODUMPS=(~/Downloads/Ekomobi_AllBackups/mongo-*-20120121*.tgz)
-MONGODUMPS=(~/Downloads/Ekomobi_AllBackups/mongo-*-20120217*.tgz)
+#MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*.tgz)
+# MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-20120121*.tgz)
+MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-20120223*.tgz)
 RESTOREPATH=restore
 DATAPATH=data
 GITDIR=git-mongo
@@ -26,8 +26,11 @@ function restoredump(){
 
     # echo Sizes `du -sm ${RESTOREPATH} ${DATAPATH}`
 
-    # time php dump.php ${DBNAME} ${GITDIR}
-    # echo "END PHP  ------"
+    time php dump.php ${DBNAME} ${GITDIR}
+    echo "END PHP  ------"
+    time node fixchunks.js ${DBNAME} ${GITDIR}
+    time node fixchunks.js ${DBNAME} ${GITDIR}
+    echo "END fix ------"
     time node dump.js ${DBNAME} ${GITDIR}
     echo "END node ------"
 
@@ -54,11 +57,11 @@ for d in ${MONGODUMPS[@]}; do
     rm -rf ${GITDIR}/${DBNAME};
     # (cd ${GITDIR}; git status)
     restoredump $d
-    time (cd ${GITDIR}; git add -u .; git add .; git status; git commit -q -m `basename $d .tgz`);
-    echo "END commit ------"
+    # time (cd ${GITDIR}; git add -u .; git add .; git status; git commit -q -m `basename $d .tgz`);
+    #     echo "END commit ------"
     
 done
 
 echo "Stop mongo"
 echo "db.shutdownServer();" | mongo admin >/dev/null
-rm -rf ${DATAPATH}
+#rm -rf ${DATAPATH}
