@@ -1,6 +1,65 @@
 # mongo2git = Mongudump to git
 Idea: progressively commit database snapshots through a mongo dump to a git repo
 
+## Size problem ?
+It turns out that mongo-php'implementation of GridFS does not have a standard representation.
+The normal represeantaiotn of chunked GrtidFS files looks like this
+
+    fs.files: [
+        {_id:xx0, length:len0, ...}
+        {_id:xx1, length:len1, ...}
+    ]
+    fs.chunks: [
+        {id:yy1 files_id:xx0, n:0, data:BinData(2,<Base4Str>)}
+        {id:yy2 files_id:xx0, n:1, data:BinData(2,<Base4Str>)}
+        {id:yy3 files_id:xx1, n:0, data:BinData(2,<Base4Str>)}
+        {id:yy4 files_id:xx1, n:1, data:BinData(2,<Base4Str>)}
+    ]
+    
+The problem lies in the fact that the chunks.data members are all prefixed with 4 bytes, in the php,
+which all seem to have the fs.file.length encoded as a prefix to the data. we can detect this becaus the length
+reported in fs.files does not match the sum of lengths of the associated chunks.
+Here is a mongo shell script snippet which reports the problem.
+
+    db.fs.files.find({}).forEach(function(f){
+      var _id=f._id;
+      var fileSize=db.fs.files.findOne({_id:_id}).length;
+      var chunkSizeSum=0;
+      var chunkCount=0;
+      db.fs.chunks.find({files_id:_id}).forEach(function(c){
+        var chunkSize=c.data.length();
+        chunkSizeSum+=chunkSize;
+        chunkCount++;
+      });
+      if (fileSize==chunkSizeSum) {
+          printjson([_id.toString(),'chunks are ok']);
+      } else if (chunkSizeSum==(fileSize+chunkCount*4)) {
+          // php's bad representation
+          printjson([_id.toString(),'chunks in php-mongo format']);
+      } else {
+          printjson([_id.toString(),'chunks unknown format',fileSize,chunkSizeSum,chunkCount,fileSize-chunkSizeSum]);
+      }
+    });
+
+    // THIS DOES NOT WORK: we want to trim 4 byte of the data, not 4 bytes of the base64 (that trims only 3 bytes.)
+    // Don't know how to get the bin data in the mongoshell
+    // trim 4 byte prefix!
+    db.fs.chunks.find().forEach(function(c){
+      var chunkSize=c.data.length();
+      var prefix = c.data.base64().substr(0,4);
+      var prefixBin = new BinData(2,prefix);
+      var prefixHex = prefixBin.hex();
+      var trimed = c.data.base64().substr(4);
+      var trimedBin = new BinData(2,trimed);
+      //printjson([chunkSize,c.data.base64(),prefix,prefix.length,prefixHex,trimed.length]);
+      printjson([chunkSize,'=',prefixBin.length(),'+',trimedBin.length(),prefixHex]);
+
+      c.data=trimedBin;
+      db.fs.chunks.save(c)
+
+    });
+
+
 ## Restore loop
 To fetch:
 
