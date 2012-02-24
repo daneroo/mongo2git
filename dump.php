@@ -151,11 +151,7 @@ function saveFile($strid,$backupDir){
     // decode base64
     $data = base64_decode($data);
 
-    $tmpfile='files/'.$id.'-php.png';
-    $fp = fopen($tmpfile, 'w');
-    fwrite($fp, $data);
-    fclose($fp);
-
+    // now actually save the file
     $tmpfile=$backupDir.'/'.$id.'.png';
     $fp = fopen($tmpfile, 'w');
     fwrite($fp, $data);
