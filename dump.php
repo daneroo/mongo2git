@@ -1,5 +1,56 @@
 <?php
 
+main(&$argv);
+
+function main($argv) {
+    $dbname = $argv[1];
+    $gitdir = $argv[2];
+    if ($dbname && $gitdir){        
+        echo "Dumping database: $dbname to $gitdir\n";
+        // $collectionNames=array('sites','users','archives','system.indexes','fs.files');
+        
+        // should we add system.indexes ??
+        $collectionNames = getCollections($dbname);
+        foreach ($collectionNames as $collectionName) {
+            $backupDir = backupDir($gitdir,$dbname,$collectionName,true);
+            if (substr($collectionName,-strlen('chunks'))=='chunks'){ // ends with .chunks
+                saveFiles($dbname,$collectionName,$backupDir);
+            } else {
+                saveCollection($dbname,$collectionName,$backupDir);
+            }
+        }
+
+    } else {
+        echo "Usage php dump.php <dbname> <gitdir>\n";
+    }
+}
+
+function getDB($dbname){
+    $m = new Mongo("mongodb://localhost/", array("persist" => "onlyone"));
+    $db = $m->selectDB($dbname);
+    return $db;
+}
+
+function getCollections($dbname){
+    $db = getDB($dbname);
+
+    // just return the names
+    $collectionNames=array();
+
+    $list = $db->listCollections();
+    foreach ($list as $collection) {
+        $name = str_replace($dbname.'.','',$collection->getName());
+        array_push($collectionNames,$name);
+    }    
+    return $collectionNames;
+}
+
+function getCollection($dbname,$collectionName){
+    $db = getDB($dbname);
+    $collection = $db->selectCollection($collectionName);
+    return $collection;
+}
+
 function backupDir($baseDir,$dbName,$collectionName,$create = true) {
     $path = array(
         $baseDir,
@@ -29,7 +80,20 @@ function rewriteMongoOut(&$any) {
     return $any;
 }
 
-function saveOne($object, $backupDir,$pretty) {
+function saveCollection($dbname,$collectionName,$backupDir) {
+    $collection = getCollection($dbname,$collectionName);
+    $cursor = $collection->find();
+    $docs = array_values(iterator_to_array($cursor));
+    rewriteMongoOut($docs);
+    
+    echo "$collectionName has ". $cursor->count()." entries. saving to $backupDir\n";
+    foreach ($docs as $doc) {
+        #echo "saving object ".$doc['_id']."\n";
+        saveDoc($doc, $backupDir,true);
+    }
+}
+
+function saveDoc($object, $backupDir,$pretty) {
     $_id = $object["_id"];
     if (!$_id) {
         $_id = $object["ns"];
@@ -52,35 +116,19 @@ function saveOne($object, $backupDir,$pretty) {
     }
 }
 
-function saveAll($dbname,$collectionName,$backupDir) {
-    $m = new Mongo("mongodb://localhost/", array("persist" => "onlyone"));
-    $db = $m->selectDB($dbname);
-    $collection = $db->selectCollection($collectionName);
-    $query=array();
-    $fields=array();
-    $cursor = $collection->find($query, $fields);
-    $docs = array_values(iterator_to_array($cursor));
-    rewriteMongoOut($docs);
-    
-    echo "$collectionName has ". $cursor->count()." entries. saving to $backupDir\n";
-    foreach ($docs as $doc) {
-        #echo "saving object ".$doc['_id']."\n";
-        saveOne($doc, $backupDir,false);
-    }
-}
-
-function saveFiles($backupDir){
-    $dbname='ekomobi_bak';
-    $m = new Mongo("mongodb://localhost/", array("persist" => "onlyone"));
-    $db = $m->selectDB($dbname);
-
-    $files = $db->selectCollection('fs.files');
+function saveFiles($dbname,$chunkCollectionName,$backupDir) {
+    // get files collection associated with this chunk collection
+    $fileCollectionName = str_replace('.chunks','.files',$chunkCollectionName);
+    $files = getCollection($dbname,$fileCollectionName);
     $cursor = $files->find();
+    echo "Saving chunks($chunkCollectionName) for files($fileCollectionName) to $backupDir\n";
+    $count=0;
     foreach ($cursor as $file) {
         $strid = "".$file['_id'];
-        // echo "Getting _id:".$strid."\n";
-        saveFile("".$strid,$backupDir);        
+        saveFile($strid,$backupDir);
+        $count++;
     }
+    echo "$chunkCollectionName grouped into ". $count." files. saved to $backupDir\n";
 }
 function saveFile($strid,$backupDir){
     $dbname='ekomobi_bak';
@@ -116,27 +164,8 @@ function saveFile($strid,$backupDir){
 
     $type = exif_imagetype($tmpfile);
     $mimetype = image_type_to_mime_type($type);
-    error_log('file:'.$id.' length:'.strlen($data).' md5:'.md5($data).' type:'.$mimetype);
+    // error_log('file:'.$id.' length:'.strlen($data).' md5:'.md5($data).' type:'.$mimetype);
 
 }
 
-
-$dbname = $argv[1];
-$gitdir = $argv[2];
-if ($dbname && $gitdir){
-    echo "Saving One Image\n";
-    if (1){
-        $backupDir = backupDir($gitdir,$dbname,'fs.chunks',true);
-        saveFiles($backupDir);
-    }
-    echo "Dumping database: $dbname to $gitdir\n";
-    $collections=array('sites','users','archives','system.indexes','fs.files');
-    foreach ($collections as $collectionName) {
-        $backupDir = backupDir($gitdir,$dbname,$collectionName,true);
-        saveAll($dbname,$collectionName,$backupDir);
-    }
-
-} else {
-    echo "Usage php dump.php <dbname>\n";
-}
 ?>
