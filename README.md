@@ -8,15 +8,19 @@ Dependancy for `s3-fetchAllDailys.rb`
 
 Get mongoo for php : move this to osx_mongo_install repo...
 
-    sudo pecl install mongo
+    # sudo pecl install mongo
+    This is F&^@%# Broken on Lion: God damn it.
+    
+    # Just copy it from dirac!
+    cd /usr/lib/php/extensions/no-debug-non-zts-20090626
+    scp -p dirac:/usr/lib/php/extensions/no-debug-non-zts-20090626/mongo.so .
+
     sudo vi /etc/php.ini
     # add this /etc/php.ini
     extension=mongo.so
     # verify extension os ok
     php --re mongo
     
-    //NOT
-    sudo ln -s /Developer/SDKs/MacOSX10.5.sdk/usr/include/php  php
     
  check out php's Console_Getopt
 
