@@ -1,6 +1,11 @@
 # mongo2git = Mongudump to git
 Idea: progressively commit database snapshots through a mongo dump to a git repo
 
+# Parts
+Execute in php and node
+* dump
+* verify
+* restore
 ## Size problem ?
 It turns out that mongo-php'implementation of GridFS does not have a standard representation.
 The normal represeantaiotn of chunked GrtidFS files looks like this
