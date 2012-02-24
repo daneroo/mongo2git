@@ -1,6 +1,25 @@
 # mongo2git = Mongudump to git
 Idea: progressively commit database snapshots through a mongo dump to a git repo
 
+## Install
+Dependancy for `s3-fetchAllDailys.rb`
+
+    sudo gem i aws-s3
+
+Get mongoo for php : move this to osx_mongo_install repo...
+
+    sudo pecl install mongo
+    sudo vi /etc/php.ini
+    # add this /etc/php.ini
+    extension=mongo.so
+    # verify extension os ok
+    php --re mongo
+    
+    //NOT
+    sudo ln -s /Developer/SDKs/MacOSX10.5.sdk/usr/include/php  php
+    
+ check out php's Console_Getopt
+
 # Parts
 Execute in php and node
 * dump
