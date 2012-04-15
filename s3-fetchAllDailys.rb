@@ -11,7 +11,7 @@ USE_SSL = true
 
 # mongoreader credentials
 # CREATE AWS/S3 CONNECTION
-require 's3-credentials-settings'
+require './s3-credentials-settings'
 
 # =-=- END OF SETTINGS
 
