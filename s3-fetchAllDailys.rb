@@ -63,7 +63,7 @@ end
 
 puts "--now fetch some backups"
 
-selectedDB.each do |f|
+selectedDB.to_a.reverse.each do |f|
   next unless f.key.include? "-0000-" # just download dailys
   fname = File.join(SNAPSHOTS_DIR, f.key)
   # puts "  -consider #{f.key} : #{f.size} bytes, modified: #{f.last_modified}  etag:#{f.etag}"
