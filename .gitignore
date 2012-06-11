@@ -1,6 +1,6 @@
 
 s3-credentials-settings.rb
-snapshots-daily
+s3-settings.json
 
 node_modules
 git-mongo
