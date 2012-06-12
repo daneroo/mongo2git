@@ -11,6 +11,10 @@ Idea: progressively commit database snapshots through a mongo dump to a git repo
 
     node s3-fetch.js
 
+## testing for dumpFilesForS3.php
+
+    time php dumpFilesForS3.php ekomobi_bak images
+
 ## Install notes - ruby version
 Dependancy for `s3-fetchAllDailys.rb`
 
