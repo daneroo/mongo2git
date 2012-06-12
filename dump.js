@@ -20,9 +20,7 @@ function dump(dbname,gitdir){
     }
     var basename = path.join(gitdir,dbname);  
     eachCollection(db,basename,function(){
-      console.log('db:%s collections done',dbname);
       doFiles(db,basename,function(err){
-        console.log('db:%s fs.files done',dbname);
         db.close();
       });
     });
@@ -30,17 +28,16 @@ function dump(dbname,gitdir){
 }
 
 function eachCollection(db,basename,cb){
-  console.log('db:',dbname);
   db.collections(function(err, collections) {
     if ( checkError(err,cb) ) return;
     console.log('|collections|:',collections.length);
     async.forEachSeries(collections,function(collection,next){
-      console.log('  coll:',collection.collectionName);
+      // console.log('  coll:',collection.collectionName);
       if (collection.collectionName=='fs.chunks'){next();return;}
       var backupDir = path.join(basename,collection.collectionName);
       mkdirp(backupDir);    
       eachDoc(collection,backupDir,function(err){
-        console.log('  coll:',collection.collectionName,'done');
+        // console.log('  coll:',collection.collectionName,'done');
         next(err); 
       });
     },cb);      
@@ -53,7 +50,6 @@ function doFiles(db,basename,cb){
   mkdirp(backupDir);    
   mongodb.GridStore.list(db, "fs", opts, function(err,fileIds){
     // fileIds = [new mongodb.ObjectID('4f17171cdfaf88d45e00004d'),new mongodb.ObjectID('4e5d5724c9519c9d59000001')];
-    mkdirp('files');
     async.forEachSeries(fileIds,function(id,next){
       
       // console.log('fetching: ',id,id._bsontype);
@@ -61,15 +57,17 @@ function doFiles(db,basename,cb){
       g.get(id,function(err,data){
         // base64 decode:
         data = new Buffer(data.toString('binary'), 'base64');
-        var md5=crypto.createHash('md5').update(data).digest("hex");
-        console.log('file:%s length:%d md5:%s',id,data.length,md5);
-        fs.writeFileSync('files/'+id+'-node.png',data);
+        // var md5=crypto.createHash('md5').update(data).digest("hex");
+        // console.log('file:%s length:%d md5:%s',id,data.length,md5);
+
+        // mkdirp('files');
+        // fs.writeFileSync('files/'+id+'-node.png',data);
         fs.writeFileSync(path.join(backupDir,id+'.png'),data);
 
         next();
       });      
     },function(err){
-      console.log('doFiles done');
+      console.log('doFiles done (%d files)',fileIds.length);
       if (cb) cb();
     });    
   });
@@ -80,7 +78,7 @@ function eachDoc(collection,backupDir,cb){
     if(checkError(err,cb)) return;
     cursor.toArray(function(err, docs) {          
       if(checkError(err,cb)) return;
-      console.log('    |coll(',collection.collectionName,')|:',docs.length);
+      console.log('    |',collection.collectionName,'|:',docs.length);
       rewriteMongoOut(docs);
       async.forEachSeries(docs,function(doc,next){
         saveDoc(doc,backupDir,true,next);

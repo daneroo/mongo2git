@@ -3,63 +3,79 @@
 # this is a shell array
 #MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*.tgz)
 MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-201202*.tgz)
-# MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-20120223*.tgz)
+# MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-20120225*.tgz)
+
 RESTOREPATH=restore
 DATAPATH=data
 GITDIR=git-mongo
 DBNAME=ekomobi_bak
 
+function log(){
+  echo "-----" ${SECONDS} -- `date "+%Y-%m-%dT%H:%M:%S"` $* "-----"
+}
+
+function startMongo(){
+  log Start mongo
+  rm -rf ${DATAPATH}
+  mkdir ${DATAPATH}
+  mongod --dbpath data --quiet --logpath /dev/null >/dev/null 2>&1 &
+  sleep 2;
+}
+
+function stopMongo(){
+  log Stop mongo
+  echo "db.shutdownServer();" | mongo admin >/dev/null
+  #rm -rf ${DATAPATH}
+}
+
+function gitInit(){
+  log Git init
+  rm -rf ${GITDIR}
+  mkdir -p ${GITDIR}
+  (cd ${GITDIR}; git init --quiet);
+}
+
 function restoredump(){
     local DUMPARCHIVE=$1
-    echo restoring $DUMPARCHIVE
+    log Restoring $DUMPARCHIVE
+
     rm -rf ${RESTOREPATH};
     mkdir -p ${RESTOREPATH};
     (cd ${RESTOREPATH}; tar xzf ${DUMPARCHIVE}) >/dev/null
 
-    time echo "db.dropDatabase()"|mongo ${DBNAME} >/dev/null
-    echo "END drop ------"
-    time mongorestore --drop --db ${DBNAME} restore >/dev/null
-    echo "END restore ------"
-
-    # echo Sizes `du -sm ${RESTOREPATH} ${DATAPATH}`
+    echo "db.dropDatabase()"|mongo ${DBNAME} >/dev/null
+    log "Dropped DB ${DBNAME}"
+    mongorestore --drop --db ${DBNAME} restore >/dev/null 2>&1
+    log "Restored DB ${DBNAME}"
 
     # fix chunks before of or after php..
-    time node fixchunks.js ${DBNAME} ${GITDIR}
-    time node fixchunks.js ${DBNAME} ${GITDIR}
-    echo "END fix ------"
-    time php dump.php ${DBNAME} ${GITDIR}
-    echo "END PHP  ------"
-    time node dump.js ${DBNAME} ${GITDIR}
-    echo "END node ------"
+    node fixchunks.js ${DBNAME} ${GITDIR}
+    node fixchunks.js ${DBNAME} ${GITDIR}
+    log "Fixed chunks"
+    
+    # php dump.php ${DBNAME} ${GITDIR}
+    # log "Dumped (php)"
+
+    node dump.js ${DBNAME} ${GITDIR}
+    log "Dumped (node)"
 
     #cleanup
     rm -rf ${RESTOREPATH};
-    # rm -rf ${DATAPATH}
 }
 
-echo Mongo Restore loop
+log Mongo Restore loop
 
-echo Git init
-rm -rf ${GITDIR}
-mkdir -p ${GITDIR}
-(cd ${GITDIR}; git init);
-
-echo Start mongo
-rm -rf ${DATAPATH}
-mkdir ${DATAPATH}
-mongod --dbpath data --quiet --logpath /dev/null &
-sleep 3;
+gitInit
+startMongo
 
 for d in ${MONGODUMPS[@]}; do
-    # echo $d;
     rm -rf ${GITDIR}/${DBNAME};
-    # (cd ${GITDIR}; git status)
-    restoredump $d
-    time (cd ${GITDIR}; git add -u .; git add .; git status; git commit -q -m `basename $d .tgz`);
-    echo "END commit ------"
+    
+    restoredump $d 
+
+    (cd ${GITDIR}; git add -u .; git add .; git commit -q -m `basename $d .tgz`);
+    log Commited to Git
     
 done
 
-echo "Stop mongo"
-echo "db.shutdownServer();" | mongo admin >/dev/null
-#rm -rf ${DATAPATH}
+stopMongo
