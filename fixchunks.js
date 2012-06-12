@@ -19,7 +19,7 @@ function fix(dbname){
       return;
     }
     findFiles('fs',db,function(err){
-      console.log('Fixing done');
+      // console.log('Fixing done');
       if (err) console.log('  err:',err);
       db.close(); 
     });
@@ -63,7 +63,7 @@ function findChunks(gridroot,files_id,fileSize,db,cb){
           if (fileSize==chunkSizeSum) {
             // console.log('file:%s chunk format is ok',files_id);
           } else if (chunkSizeSum==(fileSize+chunkCount*4)) {
-            console.log('file:%s chunks in php-mongo format',files_id);
+            // console.log('file:%s chunks in php-mongo format',files_id);
             fixChunks(chunks,collection,cb);
             return; // so fixChunks will call the cb
           } else {
@@ -96,7 +96,7 @@ function fixChunks(chunks,chunkCollection,cb){
       next();      
     })
   },function(err){
-    console.log('  fixed %d chunks',chunks.length);
+    // console.log('  fixed %d chunks',chunks.length);
     if(cb) cb();
   });  
 }
