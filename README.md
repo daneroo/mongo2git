@@ -1,7 +1,17 @@
 # mongo2git = Mongudump to git
 Idea: progressively commit database snapshots through a mongo dump to a git repo
 
-## Install
+# node.js version
+
+### Install notes node.js version
+
+    npm install
+
+### Pull Dailys
+
+    node s3-fetch.js
+
+## Install notes - ruby version
 Dependancy for `s3-fetchAllDailys.rb`
 
     sudo gem i aws-s3

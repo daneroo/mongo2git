@@ -20,6 +20,8 @@ function dump(dbname,gitdir){
     }
     var basename = path.join(gitdir,dbname);  
     eachCollection(db,basename,function(){
+      console.log('db:%s collections done',dbname);
+      // db.close(); return;
       doFiles(db,basename,function(err){
         db.close();
       });
@@ -32,15 +34,43 @@ function eachCollection(db,basename,cb){
     if ( checkError(err,cb) ) return;
     console.log('|collections|:',collections.length);
     async.forEachSeries(collections,function(collection,next){
-      // console.log('  coll:',collection.collectionName);
-      if (collection.collectionName=='fs.chunks'){next();return;}
+      console.log('  coll:',collection.collectionName);
+      //if (collection.collectionName=='fs.chunks'){next();return;}
       var backupDir = path.join(basename,collection.collectionName);
-      mkdirp(backupDir);    
-      eachDoc(collection,backupDir,function(err){
-        // console.log('  coll:',collection.collectionName,'done');
-        next(err); 
-      });
+      mkdirp(backupDir);
+      var endsWith = '.chunks';
+      if (collection.collectionName.lastIndexOf(endsWith)>0) {
+          doChunks(collection,backupDir,function(err){
+            console.log('  coll.chunks:',collection.collectionName,'done');
+            next(err); 
+          });
+      } else {
+        eachDoc(collection,backupDir,function(err){
+          console.log('  coll:',collection.collectionName,'done');
+          next(err); 
+        });
+      }
     },cb);      
+  });
+}
+
+/* replaces (doFiles) */
+function doChunks(collection,backupDir,cb){
+  console.log('doing chunks: %s',collection.collectionName);
+
+  collection.find({}, {'sort': ['files_id','n']},function(err, cursor) {
+  // collection.find({}, {'sort': [['files_id',1], ['n',-1]]},function(err, cursor) {
+    if(checkError(err,cb)) return;
+    cursor.toArray(function(err, docs) {          
+      if(checkError(err,cb)) return;
+      console.log('    |coll(',collection.collectionName,')|:',docs.length);
+      // rewriteMongoOut(docs);
+      async.forEachSeries(docs,function(doc,next){
+        console.log('doing chunk for doc',doc._id,doc.files_id,doc.n);
+        next();
+        //saveDoc(doc,backupDir,true,next);
+      },cb);
+    });
   });
 }
 

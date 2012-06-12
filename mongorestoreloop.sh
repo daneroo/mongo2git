@@ -2,8 +2,8 @@
 
 # this is a shell array
 #MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*.tgz)
-MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-201202*.tgz)
-# MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-20120225*.tgz)
+MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-201206*.tgz)
+# MONGODUMPS=(~/Downloads/Ekomobi_Dailys/mongo-*-20120612*.tgz)
 
 RESTOREPATH=restore
 DATAPATH=data
