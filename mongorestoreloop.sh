@@ -45,7 +45,7 @@ function restoredump(){
 
     echo "db.dropDatabase()"|mongo ${DBNAME} >/dev/null
     log "Dropped DB ${DBNAME}"
-    mongorestore --drop --db ${DBNAME} restore >/dev/null 2>&1
+    mongorestore --drop --db ${DBNAME} ${RESTOREPATH} >/dev/null 2>&1
     log "Restored DB ${DBNAME}"
 
     # fix chunks before of or after php..

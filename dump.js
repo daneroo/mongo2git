@@ -21,7 +21,7 @@ function dump(dbname,gitdir){
     var basename = path.join(gitdir,dbname);  
     eachCollection(db,basename,function(){
       console.log('db:%s collections done',dbname);
-      // db.close(); return;
+      db.close(); return;
       doFiles(db,basename,function(err){
         db.close();
       });
@@ -66,7 +66,7 @@ function doChunks(collection,backupDir,cb){
       console.log('    |coll(',collection.collectionName,')|:',docs.length);
       // rewriteMongoOut(docs);
       async.forEachSeries(docs,function(doc,next){
-        console.log('doing chunk for doc',doc._id,doc.files_id,doc.n);
+        // console.log('doing chunk for doc',doc._id,doc.files_id,doc.n);
         next();
         //saveDoc(doc,backupDir,true,next);
       },cb);
@@ -103,6 +103,9 @@ function doFiles(db,basename,cb){
   });
 }
 
+function detectMime(data){
+  return ".png";
+}
 function eachDoc(collection,backupDir,cb){
   collection.find(function(err, cursor) {
     if(checkError(err,cb)) return;
